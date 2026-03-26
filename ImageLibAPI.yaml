@@ -1,0 +1,1211 @@
+openapi: 3.0.0
+info:
+  title: Bible Image Library API
+  description: The Bible image library API provides access to a curated collection of images related to the Bible.
+    High speed search capabilities allow users to find images by keywords, styles, scriptures, and collections.
+    
+    The API supports role-based access control for CRUD operations on images and collections.
+    
+    It also includes administrative endpoints for managing users and roles.
+  version: 1.0.0
+  contact:
+    name: Bible Image Library
+servers:
+  - url: https://q9md038uhk.execute-api.us-east-1.amazonaws.com
+    description: Production API
+  - url: http://localhost:3000
+    description: Local development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Cognito JWT token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    ImageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        styles:
+          type: array
+          items:
+            type: string
+        s3Key:
+          type: string
+        orig_url:
+          type: string
+        thumb_url_small:
+          type: string
+        thumb_url_large:
+          type: string
+        sort_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        external_id:
+          type: string
+        default_language_code:
+          type: string
+        original_file_name:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        copyright:
+          type: string
+        is_featured:
+          type: boolean
+        scriptures:
+          type: array
+          items:
+            type: object
+            properties:
+              image_id:
+                type: integer
+              book_id:
+                type: integer
+              book_code:
+                type: string
+              book_name:
+                type: string
+              start_chapter:
+                type: integer
+              start_verse:
+                type: integer
+              end_chapter:
+                type: integer
+              end_verse:
+                type: integer
+        thematic_links:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              thematic_link:
+                type: string
+
+    CollectionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        is_public:
+          type: boolean
+        is_featured:
+          type: boolean
+        cover_image_id:
+          type: integer
+        cover_image_url:
+          type: string
+        created_by:
+          type: string
+        created_by_email:
+          type: string
+        updated_by:
+          type: string
+        updated_by_email:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        image_count:
+          type: integer
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageResponse'
+
+    CreateImageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Image title
+        description:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        styles:
+          type: array
+          items:
+            type: string
+        scripture:
+          type: array
+          items:
+            type: object
+            properties:
+              book_id:
+                type: integer
+              start_chapter:
+                type: integer
+              start_verse:
+                type: integer
+              end_chapter:
+                type: integer
+              end_verse:
+                type: integer
+        contentType:
+          type: string
+          enum: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+        extension:
+          type: string
+        fileBase64:
+          type: string
+          description: Base64-encoded file content
+        sort_order:
+          type: integer
+        is_featured:
+          type: boolean
+        external_id:
+          type: string
+        default_language_code:
+          type: string
+        original_file_name:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        copyright:
+          type: string
+        thematic_links:
+          type: array
+          items:
+            type: string
+        definitions:
+          type: array
+          items:
+            type: object
+      required:
+        - title
+        - contentType
+        - extension
+        - fileBase64
+
+    UpdateImageRequest:
+      type: object
+      properties:
+        updateId:
+          type: integer
+          description: Image ID to update
+        title:
+          type: string
+        description:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        styles:
+          type: array
+          items:
+            type: string
+        scripture:
+          type: array
+          items:
+            type: object
+            properties:
+              book_id:
+                type: integer
+              start_chapter:
+                type: integer
+              start_verse:
+                type: integer
+              end_chapter:
+                type: integer
+              end_verse:
+                type: integer
+        contentType:
+          type: string
+          enum: ['', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+          description: Only include if updating the image file
+        extension:
+          type: string
+        fileBase64:
+          type: string
+          description: Base64-encoded file content. Only include if updating image file.
+        sort_order:
+          type: integer
+        is_featured:
+          type: boolean
+        external_id:
+          type: string
+        default_language_code:
+          type: string
+        original_file_name:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        copyright:
+          type: string
+        thematic_links:
+          type: array
+          items:
+            type: string
+        definitions:
+          type: array
+          items:
+            type: object
+      required:
+        - updateId
+
+    DeleteImageRequest:
+      type: object
+      properties:
+        deleteId:
+          type: integer
+          description: Image ID to delete
+      required:
+        - deleteId
+
+    CreateCollectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Collection name
+        description:
+          type: string
+        is_public:
+          type: boolean
+        cover_image_id:
+          type: integer
+      required:
+        - name
+
+    UpdateCollectionRequest:
+      type: object
+      properties:
+        updateId:
+          type: integer
+          description: Collection ID to update
+        name:
+          type: string
+        description:
+          type: string
+        is_public:
+          type: boolean
+        cover_image_id:
+          type: integer
+      required:
+        - updateId
+
+    DeleteCollectionRequest:
+      type: object
+      properties:
+        deleteId:
+          type: integer
+          description: Collection ID to delete
+      required:
+        - deleteId
+
+    AddImagesToCollectionRequest:
+      type: object
+      properties:
+        collectionId:
+          type: integer
+        imageIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - collectionId
+        - imageIds
+
+    RemoveImagesFromCollectionRequest:
+      type: object
+      properties:
+        collectionId:
+          type: integer
+        imageIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - collectionId
+        - imageIds
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageResponse'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    BibleBook:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          description: 3-letter book code (e.g., 'GEN', 'MAT', 'LUK')
+        name:
+          type: string
+        testament:
+          type: string
+          enum: ['Old Testament', 'New Testament']
+
+    KeywordResponse:
+      type: object
+      properties:
+        keyword:
+          type: string
+        count:
+          type: integer
+
+    StyleResponse:
+      type: object
+      properties:
+        style:
+          type: string
+        count:
+          type: integer
+
+    UserResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+        created_date:
+          type: string
+          format: date-time
+        groups:
+          type: array
+          items:
+            type: string
+
+    RoleResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        userCount:
+          type: integer
+
+security:
+  - BearerAuth: []
+
+paths:
+  /images/create:
+    post:
+      tags:
+        - Images
+      summary: Create a new image
+      description: Upload a new image with metadata. Requires Contributor role or higher.
+      operationId: createImage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateImageRequest'
+      responses:
+        '201':
+          description: Image created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '400':
+          description: Bad request - missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /images/update:
+    post:
+      tags:
+        - Images
+      summary: Update an image
+      description: Update image metadata or file. Only submitter or administrator can update.
+      operationId: updateImage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateImageRequest'
+      responses:
+        '200':
+          description: Image updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /images/delete:
+    post:
+      tags:
+        - Images
+      summary: Delete an image
+      description: Delete an image. Only submitter or administrator can delete.
+      operationId: deleteImage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteImageRequest'
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /images/{id}:
+    get:
+      tags:
+        - Images
+      summary: Get image by ID
+      description: Retrieve detailed information about a specific image
+      operationId: getImage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Image ID
+      responses:
+        '200':
+          description: Image details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '400':
+          description: Missing image ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Search images
+      description: Search images by keywords, styles, scriptures, or text query
+      operationId: searchImages
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Text search query
+        - name: k
+          in: query
+          schema:
+            type: string
+          description: Keywords filter (comma-separated, e.g., "Mary,Angel")
+        - name: s
+          in: query
+          schema:
+            type: string
+          description: Styles filter (comma-separated, e.g., "Minimalist,Historical Realism")
+        - name: b
+          in: query
+          schema:
+            type: string
+          description: Bible book names filter (comma-separated, e.g., "Luke,Exodus")
+        - name: c
+          in: query
+          schema:
+            type: string
+          description: Collection IDs filter (comma-separated)
+        - name: scripture
+          in: query
+          schema:
+            type: string
+          description: |
+              Scripture range as JSON string: 
+               - Example: {"book_code":"LUK","start_idx":42001001,"end_idx":42002003}. (Luke 1:1-2:3)
+               - book_code: 3-letter book code (e.g., "LUK")
+               - start_idx and end_idx: integer verse indices (book_id * 1,000,000 + chapter * 1000 + verse)
+                - idx = BBCCCVVV where BB=book number based on traditional book order, this is a numerical value WITHOUT a leading 0; 
+                CCC=3 digit chapter, VVV=3-digit verse with leading zeros)              
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 100
+          description: Results per page
+        - name: sortByNewest
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Sort by newest first
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Return only featured images
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+      security: []
+
+  /collections:
+    get:
+      tags:
+        - Collections
+      summary: List or get all collections
+      description: |
+        List all collections. If featured=true, returns featured collections (up to 4) 
+        with public collections as fallback.
+      operationId: listCollections
+      parameters:
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Get featured collections
+      responses:
+        '200':
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollectionResponse'
+      security: []
+
+  /collections/{id}:
+    get:
+      tags:
+        - Collections
+      summary: Get collection by ID
+      description: Retrieve a specific collection with all associated images
+      operationId: getCollection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Collection ID or UUID
+      responses:
+        '200':
+          description: Collection details with images
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '404':
+          description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+
+  /collections/create:
+    post:
+      tags:
+        - Collections
+      summary: Create a new collection
+      description: Create a new collection. Only Administrators and Curators can create public collections.
+      operationId: createCollection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+      responses:
+        '201':
+          description: Collection created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '400':
+          description: Bad request - missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /collections/update:
+    post:
+      tags:
+        - Collections
+      summary: Update a collection
+      description: Update collection metadata
+      operationId: updateCollection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+      responses:
+        '200':
+          description: Collection updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /collections/delete:
+    post:
+      tags:
+        - Collections
+      summary: Delete a collection
+      description: Delete a collection. Only collection owner or administrator can delete.
+      operationId: deleteCollection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteCollectionRequest'
+      responses:
+        '200':
+          description: Collection deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /collections/add-images:
+    post:
+      tags:
+        - Collections
+      summary: Add images to collection
+      description: Add one or more images to a collection
+      operationId: addImagesToCollection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddImagesToCollectionRequest'
+      responses:
+        '200':
+          description: Images added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collection or images not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /collections/remove-images:
+    post:
+      tags:
+        - Collections
+      summary: Remove images from collection
+      description: Remove one or more images from a collection
+      operationId: removeImagesFromCollection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveImagesFromCollectionRequest'
+      responses:
+        '200':
+          description: Images removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collection or images not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /books:
+    get:
+      tags:
+        - Reference
+      summary: List Bible books
+      description: Get list of all Bible books
+      operationId: getBooks
+      responses:
+        '200':
+          description: List of Bible books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BibleBook'
+      security: []
+
+  /keywords:
+    get:
+      tags:
+        - Reference
+      summary: List all keywords
+      description: Get list of keywords with usage count
+      operationId: listKeywords
+      responses:
+        '200':
+          description: List of keywords
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KeywordResponse'
+      security: []
+
+  /styles:
+    get:
+      tags:
+        - Reference
+      summary: List all styles
+      description: Get list of image styles with usage count
+      operationId: listStyles
+      responses:
+        '200':
+          description: List of styles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StyleResponse'
+      security: []
+
+  /admin/users:
+    get:
+      tags:
+        - Administration
+      summary: List all users
+      description: List all users in the system. Requires Administrator role.
+      operationId: listUsers
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /admin/roles:
+    get:
+      tags:
+        - Administration
+      summary: List all roles
+      description: Get list of available roles and their members. Requires Administrator role.
+      operationId: listRoles
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /admin/users/{userId}/role:
+    post:
+      tags:
+        - Administration
+      summary: Update user role
+      description: Add or update a user's role. Requires Administrator role.
+      operationId: updateUserRole
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID (Cognito sub claim)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  description: Role name (e.g., Administrator, Curator, Contributor, Viewer)
+              required:
+                - role
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /admin/users/{userId}/role/{role}:
+    delete:
+      tags:
+        - Administration
+      summary: Remove user role
+      description: Remove a role from a user. Requires Administrator role.
+      operationId: removeUserRole
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User ID (Cognito sub claim)
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Role name to remove
+      responses:
+        '200':
+          description: Role removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
