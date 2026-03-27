@@ -38,10 +38,16 @@ components:
       properties:
         id:
           type: integer
+        uuid:
+          type: string
+          format: uuid
+          nullable: true
         title:
           type: string
+          nullable: true
         description:
           type: string
+          nullable: true
         keywords:
           type: array
           items:
@@ -50,59 +56,69 @@ components:
           type: array
           items:
             type: string
-        s3Key:
+        s3key:
           type: string
+          nullable: true
         orig_url:
           type: string
+          nullable: true
         thumb_url_small:
           type: string
+          nullable: true
         thumb_url_large:
           type: string
+          nullable: true
         sort_order:
           type: integer
+          nullable: true
+        submitted_by:
+          type: string
+          nullable: true
+        submitted_by_email:
+          type: string
+          format: email
+          nullable: true
+        is_published:
+          type: boolean
+          nullable: true
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+        updated_by:
+          type: string
+          nullable: true
+        updated_by_email:
+          type: string
+          format: email
+          nullable: true
         external_id:
           type: string
+          nullable: true
         default_language_code:
           type: string
+          nullable: true
         original_file_name:
           type: string
+          nullable: true
         authors:
-          type: array
-          items:
-            type: string
+          type: string
+          nullable: true
         copyright:
           type: string
+          nullable: true
         is_featured:
           type: boolean
         scriptures:
           type: array
           items:
-            type: object
-            properties:
-              image_id:
-                type: integer
-              book_id:
-                type: integer
-              book_code:
-                type: string
-              book_name:
-                type: string
-              start_chapter:
-                type: integer
-              start_verse:
-                type: integer
-              end_chapter:
-                type: integer
-              end_verse:
-                type: integer
+            type: string
+          nullable: true
         thematic_links:
           type: array
+          nullable: true
           items:
             type: object
             properties:
@@ -110,6 +126,80 @@ components:
                 type: integer
               thematic_link:
                 type: string
+        definitions:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              language_code:
+                type: string
+              title:
+                type: string
+                nullable: true
+              subject:
+                type: string
+                nullable: true
+              description:
+                type: string
+                nullable: true
+              tags:
+                type: array
+                items:
+                  type: string
+                nullable: true
+
+    CollectionImageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        keywords:
+          type: array
+          items:
+            type: string
+        styles:
+          type: array
+          items:
+            type: string
+        s3key:
+          type: string
+          nullable: true
+        orig_url:
+          type: string
+          nullable: true
+        thumb_url_small:
+          type: string
+          nullable: true
+        thumb_url_large:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+        collection_sort_order:
+          type: integer
+          nullable: true
+        added_by:
+          type: string
+          nullable: true
+        added_by_email:
+          type: string
+          format: email
+          nullable: true
+        added_at:
+          type: string
+          format: date-time
+          nullable: true
 
     CollectionResponse:
       type: object
@@ -150,7 +240,7 @@ components:
         images:
           type: array
           items:
-            $ref: '#/components/schemas/ImageResponse'
+            $ref: '#/components/schemas/CollectionImageResponse'
 
     CreateImageRequest:
       type: object
@@ -369,16 +459,91 @@ components:
     SearchResponse:
       type: object
       properties:
-        results:
+        items:
           type: array
           items:
-            $ref: '#/components/schemas/ImageResponse'
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
+            type: object
+            properties:
+              id:
+                type: integer
+              uuid:
+                type: string
+                format: uuid
+              title:
+                type: string
+              keywords:
+                type: array
+                items:
+                  type: string
+              styles:
+                type: array
+                items:
+                  type: string
+              orig_url:
+                type: string
+              thumb_url_small:
+                type: string
+              thumb_url_large:
+                type: string
+              s3key:
+                type: string
+              sort_order:
+                type: integer
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+              submitted_by:
+                type: string
+              submitted_by_email:
+                type: string
+                format: email
+              is_published:
+                type: boolean
+              is_featured:
+                type: boolean
+              updated_by:
+                type: string
+                nullable: true
+              updated_by_email:
+                type: string
+                format: email
+                nullable: true
+              description:
+                type: string
+                nullable: true
+              external_id:
+                type: string
+                nullable: true
+              default_language_code:
+                type: string
+                nullable: true
+              original_file_name:
+                type: string
+                nullable: true
+              authors:
+                type: string
+                nullable: true
+              copyright:
+                type: string
+                nullable: true
+              scriptures:
+                type: array
+                items:
+                  type: string
+        pageInfo:
+          type: object
+          properties:
+            page:
+              type: integer
+            hasNextPage:
+              type: boolean
+            totalMatches:
+              type: integer
+            totalPages:
+              type: integer
 
     BibleBook:
       type: object
