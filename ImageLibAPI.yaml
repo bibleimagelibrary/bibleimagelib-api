@@ -555,9 +555,9 @@ components:
           description: 3-letter book code (e.g., 'GEN', 'MAT', 'LUK')
         name:
           type: string
-        testament:
+        book_order:
           type: string
-          enum: ['Old Testament', 'New Testament']
+          description: Textual book order that can be sorted alphanumerically, with 'A' prefix for Old Testament and 'B' prefix for New Testament (e.g., 'A01', 'B01')
 
     KeywordResponse:
       type: object
@@ -1182,9 +1182,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/KeywordResponse'
+                type: object
+                properties:
+                  keywords:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KeywordResponse'
+                required:
+                  - keywords
       security: []
 
   /styles:
@@ -1192,7 +1197,7 @@ paths:
       tags:
         - Reference
       summary: List all styles
-      description: Get list of image styles with usage count
+      description: Get list of image styles
       operationId: listStyles
       responses:
         '200':
@@ -1200,9 +1205,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/StyleResponse'
+                type: object
+                properties:
+                  styles:
+                    type: array
+                    items:
+                      type: string
+                required:
+                  - styles
       security: []
 
   /admin/users:
