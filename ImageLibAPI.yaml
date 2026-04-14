@@ -213,28 +213,34 @@ components:
           type: string
         description:
           type: string
+          nullable: true
         is_public:
           type: boolean
         is_featured:
           type: boolean
         cover_image_id:
           type: integer
+          nullable: true
         cover_image_url:
           type: string
+          nullable: true
         created_by:
           type: string
         created_by_email:
           type: string
         updated_by:
           type: string
+          nullable: true
         updated_by_email:
           type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+          nullable: true
         image_count:
           type: integer
         images:
@@ -863,8 +869,10 @@ paths:
         - Collections
       summary: List or get all collections
       description: |
-        List all collections. If featured=true, returns featured collections (up to 4) 
-        with public collections as fallback.
+        List all collections. Returns only public collections and the authenticated user's private collections.
+        If featured=true, attempts to return a minimum of 4 collections or as many featured collections as exist (no maximum).
+        If fewer than 4 featured collections exist, the response is filled with public collections to reach 4 collections.
+        If there are not enough featured + public collections to reach 4, then all featured and public collections are returned.        
       operationId: listCollections
       parameters:
         - name: featured
@@ -872,7 +880,7 @@ paths:
           schema:
             type: boolean
             default: false
-          description: Get featured collections
+          description: Get featured collections (limit 4, filled with public collections if needed)
       responses:
         '200':
           description: List of collections
@@ -1158,6 +1166,13 @@ paths:
       summary: List Bible books
       description: Get list of all Bible books
       operationId: getBooks
+      parameters:
+        - name: all
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include all books when true
       responses:
         '200':
           description: List of Bible books
@@ -1378,6 +1393,156 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+
+  /marble-sync:
+    post:
+      tags:
+        - Administration
+      summary: Sync original images to Marble destination bucket
+      description: >
+        Copies original image assets (from images.orig_url) for the provided image_ids
+        to the destination S3 bucket in another AWS account. Requires Administrator role.
+      operationId: marbleSync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: array
+                  items:
+                    oneOf:
+                      - type: integer
+                      - type: string
+                - type: object
+                  properties:
+                    image_ids:
+                      type: array
+                      items:
+                        oneOf:
+                          - type: integer
+                          - type: string
+                  required:
+                    - image_ids
+      responses:
+        '200':
+          description: Sync results by image ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  destination_bucket:
+                    type: string
+                  destination_prefix:
+                    type: string
+                  total_requested:
+                    type: integer
+                  copied:
+                    type: integer
+                  failed:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        image_id:
+                          type: string
+                        status:
+                          type: string
+                          enum: [copied, failed]
+                        source_key:
+                          type: string
+                        destination_key:
+                          type: string
+                        error:
+                          type: string
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /marble-get:
+    get:
+      tags:
+        - Administration
+      summary: List objects in Marble destination bucket
+      description: >
+        Retrieves a list of all objects in the destination S3 bucket (marble-image/BIL prefix)
+        with their metadata (size, last modified). Requires Administrator role.
+      operationId: marbleGet
+      responses:
+        '200':
+          description: List of objects in the destination bucket
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  destination_bucket:
+                    type: string
+                  destination_prefix:
+                    type: string
+                  total_count:
+                    type: integer
+                  objects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        size:
+                          type: integer
+                          description: Size in bytes
+                        last_modified:
+                          type: string
+                          format: date-time
+                          description: ISO 8601 timestamp
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions - Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
           content:
             application/json:
               schema:
