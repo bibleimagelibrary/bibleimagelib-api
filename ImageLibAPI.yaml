@@ -869,11 +869,39 @@ paths:
         - Collections
       summary: List or get all collections
       description: |
-        List all collections. Returns only public collections and the authenticated user's private collections.
+        List all collections. Returns only public collections.
         If featured=true, attempts to return a minimum of 4 collections or as many featured collections as exist (no maximum).
         If fewer than 4 featured collections exist, the response is filled with public collections to reach 4 collections.
         If there are not enough featured + public collections to reach 4, then all featured and public collections are returned.        
       operationId: listCollections
+      parameters:
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Get featured collections (filled with public collections if needed)
+      responses:
+        '200':
+          description: List of collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollectionResponse'
+      security: []
+
+  /collections/get:
+    get:
+      tags:
+        - Collections
+      summary: List collections (authenticated)
+      description: |
+        List collections for authenticated users. Administrators and Curators can view all collections,
+        including private collections. Other authenticated users can view public collections and their own
+        private collections. If featured=true, the same featured/fallback logic applies as the public endpoint.
+      operationId: listCollectionsAuthenticated
       parameters:
         - name: featured
           in: query
@@ -890,7 +918,65 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/CollectionResponse'
-      security: []
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
+  /collections/get/{id}:
+    get:
+      tags:
+        - Collections
+      summary: Get collection by ID (authenticated)
+      description: |
+        Retrieve a specific collection with all associated images for authenticated users.
+        Administrators and Curators can view any collection. Other authenticated users can
+        view public collections and their own private collections.
+      operationId: getCollectionAuthenticated
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Collection ID or UUID
+      responses:
+        '200':
+          description: Collection details with images
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '400':
+          description: Invalid collection ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
 
   /collections/{id}:
     get:
