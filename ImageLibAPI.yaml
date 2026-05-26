@@ -68,6 +68,10 @@ components:
         thumb_url_large:
           type: string
           nullable: true
+        avg_luminance:
+          type: number
+          format: double
+          nullable: true
         sort_order:
           type: integer
           nullable: true
@@ -183,6 +187,10 @@ components:
         thumb_url_large:
           type: string
           nullable: true
+        avg_luminance:
+          type: number
+          format: double
+          nullable: true
         sort_order:
           type: integer
           nullable: true
@@ -223,6 +231,10 @@ components:
           nullable: true
         cover_image_url:
           type: string
+          nullable: true
+        cover_image_luminance:
+          type: number
+          format: double
           nullable: true
         created_by:
           type: string
@@ -491,6 +503,10 @@ components:
                 type: string
               thumb_url_large:
                 type: string
+              avg_luminance:
+                type: number
+                format: double
+                nullable: true
               s3key:
                 type: string
               sort_order:
