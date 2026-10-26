@@ -34,7 +34,8 @@ You will see the interactive Swagger documentation for the Bible Image Library A
 
 ### Deploy on GitHub Pages
 
-- From the [bibleimagelibrary/bibleimagelib-api](https://github.com/bibleimagelibrary/bibleimagelib-api) GitHub repo
+- Log in to bibleimagelibrary (using bibleimagelibrary@gmail.com)
+- From the [bibleimagelibrary/bibleimagelib-api](https://github.com/bibleimagelibrary/bibleimagelib-api) GitHub repo.
 - Click Settings → Pages
 - Under Source dropdown, choose main
 - Click Save
