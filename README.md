@@ -37,7 +37,7 @@ You will see the interactive Swagger documentation for the Bible Image Library A
 - Log in to bibleimagelibrary (using bibleimagelibrary@gmail.com)
 - From the [bibleimagelibrary/bibleimagelib-api](https://github.com/bibleimagelibrary/bibleimagelib-api) GitHub repo.
 - Click Settings → Pages
-- Under Source dropdown, choose main
+- Under Source dropdown, Deploy from Branch -> main
 - Click Save
 - After a minute or two, your site will be live at: [https://bibleimagelibrary.github.io/bibleimagelib-api/](https://bibleimagelibrary.github.io/bibleimagelib-api/)
 - Any updates to the repo will trigger an automatic rebuild
