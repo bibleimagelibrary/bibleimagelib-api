@@ -36,6 +36,24 @@ components:
       required:
         - error
 
+    RenderExternalIds:
+      type: object
+      description: >-
+        All render identifiers grouped by authority code, then identifier.
+        Identifier values are empty metadata objects. Missing authorities are
+        omitted; renders without identifiers return an empty object.
+      additionalProperties:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+      example:
+        OBI:
+          93bd5806-d0e2-449b-8343-d6298d8a9cf7: {}
+        SIL:
+          OC00034: {}
+          OC00035: {}
+
     ImageResponse:
       type: object
       properties:
@@ -160,6 +178,9 @@ components:
         external_id:
           type: string
           nullable: true
+          description: Legacy first identifier sorted by authority code and identifier, or null. Use external_ids for all identifiers.
+        external_ids:
+          $ref: '#/components/schemas/RenderExternalIds'
         default_language_code:
           type: string
           nullable: true
@@ -319,6 +340,12 @@ components:
     CollectionImageResponse:
       type: object
       properties:
+        external_id:
+          type: string
+          nullable: true
+          description: Legacy first identifier sorted by authority code and identifier, or null.
+        external_ids:
+          $ref: '#/components/schemas/RenderExternalIds'
         composition_id:
           type: integer
         composition_uuid:
@@ -549,7 +576,7 @@ components:
           description: Required for creation; 0 creates a new composition.
         source_s3_key:
           type: string
-          description: Alternative to fileBase64; key of an existing upload.
+          description: Alternative to fileBase64; key of an existing upload. Keys under url-imports/ must belong to the caller, be unexpired, and use the configured uploads bucket and returned contentType/extension.
         source_s3_bucket:
           type: string
           description: Optional source bucket; defaults to configured upload/original bucket.
@@ -654,7 +681,7 @@ components:
           type: boolean
         source_s3_key:
           type: string
-          description: Existing upload key to use instead of fileBase64 when replacing the file.
+          description: Existing upload key to use instead of fileBase64 when replacing the file. Keys under url-imports/ must belong to the caller, be unexpired, and use the configured uploads bucket and returned contentType/extension.
         source_s3_bucket:
           type: string
           description: Optional source bucket; defaults to configured upload/original bucket.
@@ -992,6 +1019,9 @@ components:
               external_id:
                 type: string
                 nullable: true
+                description: Legacy first identifier sorted by authority code and identifier, or null. May differ from the identifier matched by xid/xcode.
+              external_ids:
+                $ref: '#/components/schemas/RenderExternalIds'
               default_language_code:
                 type: string
                 nullable: true
@@ -1013,6 +1043,11 @@ components:
           properties:
             page:
               type: integer
+            limit:
+              type: integer
+              minimum: 1
+              maximum: 100
+              description: Effective page size after applying the 100 cap. Newest sorting retains composition-based pagination.
             hasNextPage:
               type: boolean
             totalMatches:
@@ -1093,6 +1128,89 @@ security:
   - BearerAuth: []
 
 paths:
+  /images/stage-url:
+    post:
+      tags: [Images]
+      summary: Download a remote image or PDF into temporary S3 storage
+      operationId: stageImageUrl
+      description: >-
+        Requires Administrator, Curator, or Contributor role. Accepts HTTPS URLs
+        on configured exact source hosts, including redirect hosts. Downloads at
+        most 25 MiB within 15 seconds; supports JPEG, PNG, GIF, WebP and PDF.
+        Does not create a composition or render. Submit the returned source_s3_key,
+        contentType and extension to images/create or images/update within 24 hours
+        using the same user. Omit source_s3_bucket to use the configured uploads
+        bucket. Staged files remain reusable until expiry; retries of creation are
+        not idempotent. Empty host configuration disables staging. Compressed HTTP
+        responses and custom authentication headers are unsupported.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image_url]
+              properties:
+                image_url:
+                  type: string
+                  format: uri
+                  maxLength: 8192
+      responses:
+        '201':
+          description: File staged; expiry is enforced by the application, while S3 deletion is eventual.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [source_s3_key, contentType, extension, format, resolution, mime_type, size_bytes, expires_at]
+                properties:
+                  source_s3_key:
+                    type: string
+                  contentType:
+                    type: string
+                    enum: [image/jpeg, image/png, image/gif, image/webp, application/pdf]
+                  extension:
+                    type: string
+                    enum: [jpg, png, gif, webp, pdf]
+                  size_bytes:
+                    type: integer
+                    maximum: 26214400
+                  format:
+                    type: string
+                    enum: [jpg, png, gif, webp, pdf]
+                  resolution:
+                    type: string
+                    nullable: true
+                    example: 1024x1024
+                    description: Best-effort width x height from file headers; null if unavailable. PDFs use a discoverable MediaBox in points at 72 DPI, not intrinsic pixel dimensions.
+                  mime_type:
+                    type: string
+                    description: Detected media type; identical to contentType.
+                    enum: [image/jpeg, image/png, image/gif, image/webp, application/pdf]
+                  expires_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid JSON, URL, or disallowed destination
+        '401':
+          description: Authentication required
+        '403':
+          description: Insufficient upload permissions
+        '413':
+          description: File exceeds 25 MiB
+        '415':
+          description: Unsupported file bytes or compressed HTTP response
+        '429':
+          description: Staging concurrency or request limit reached; retry with backoff
+        '500':
+          description: Storage or configuration failure
+        '502':
+          description: Remote HTTP, DNS, TLS, redirect, or incomplete response failure
+        '504':
+          description: Download deadline exceeded
+
   /images:
     get:
       summary: Report a missing image ID
@@ -1287,6 +1405,18 @@ paths:
       description: Search images by keywords, styles, scriptures, or text query
       operationId: searchImages
       parameters:
+        - name: xid
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact, case-sensitive external ID filter across render ID authorities. Preserves leading zeros and applies even when featured=true. Blank values are invalid.
+        - name: xcode
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact, case-sensitive authority code. Alone, matches renders with any external ID under that authority. With xid, both must match the same cross-reference row. Blank values are invalid.
         - name: t
           in: query
           schema:
@@ -1333,14 +1463,16 @@ paths:
           schema:
             type: integer
             default: 1
+            minimum: 1
           description: Page number for pagination
         - name: limit
           in: query
           schema:
             type: integer
             default: 30
+            minimum: 1
             maximum: 100
-          description: Results per page
+          description: Positive page size, capped at 100 by the backend. The effective size is returned as pageInfo.limit.
         - name: sortByNewest
           in: query
           schema:
@@ -1360,6 +1492,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid search parameters, including blank xid/xcode, nonpositive or noninteger page/limit, or an unsafe pagination offset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
       security: []
 
   /collections:
@@ -2147,7 +2285,8 @@ paths:
       summary: Sync original images to Marble destination bucket
       description: >
         Copies original image assets (from images.orig_url) for the provided image_ids
-        to the destination S3 bucket in another AWS account. Requires Administrator role.
+        to the destination S3 bucket in another AWS account. Requires Administrator or Curator role,
+        including in dry-run mode. Accepts any non-deleted render regardless of ownership or visibility.
       operationId: marbleSync
       parameters:
         - name: dry-run
@@ -2246,7 +2385,7 @@ paths:
       summary: List objects in Marble destination bucket
       description: >
         Retrieves a list of all objects in the destination S3 bucket (marble-image/BIL prefix)
-        with their metadata (size, last modified). Requires Administrator role.
+        with their metadata (size, last modified) and download URLs. Requires Administrator or Curator role.
       operationId: marbleGet
       responses:
         '200':
