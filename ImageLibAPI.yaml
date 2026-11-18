@@ -56,7 +56,7 @@ components:
 
     CompositionResponse:
       type: object
-      required: [id, uuid, title, keywords, scriptures, composition_definitions, composition_thematic_links, updated_by, updated_by_email]
+      required: [id, uuid, title, keywords, scriptures, composition_definitions, composition_thematic_links, created_by, updated_by, updated_by_email]
       properties:
         id: { type: integer, format: int64 }
         uuid: { type: string, format: uuid }
@@ -73,6 +73,7 @@ components:
         copyright_license: { type: string, nullable: true }
         copyright_attribution: { type: string, nullable: true }
         created_at: { type: string, format: date-time }
+        created_by: { type: string, nullable: true, description: Cognito subject of the composition creator. }
         updated_at: { type: string, format: date-time }
         updated_by: { type: string, nullable: true }
         updated_by_email: { type: string, format: email, nullable: true }
@@ -267,6 +268,10 @@ components:
         created_at:
           type: string
           format: date-time
+        created_by:
+          type: string
+          nullable: true
+          description: Cognito subject of the composition creator.
         updated_at:
           type: string
           format: date-time
@@ -1096,6 +1101,10 @@ components:
               created_at:
                 type: string
                 format: date-time
+              created_by:
+                type: string
+                nullable: true
+                description: Cognito subject of the composition creator.
               updated_at:
                 type: string
                 format: date-time
@@ -1334,7 +1343,9 @@ paths:
       tags:
         - Images
       summary: Create a new image
-      description: Upload a new image with metadata. Requires Contributor role or higher.
+      description: >
+        Contributors can create a composition or add a render to an active composition
+        they created. Curators and administrators can add renders to any active composition.
       operationId: createImage
       requestBody:
         required: true
@@ -1375,7 +1386,9 @@ paths:
       tags:
         - Images
       summary: Update an image
-      description: Update image metadata or file. Only submitter or administrator can update.
+      description: >
+        Contributors can update renders they submitted in compositions they created.
+        Curators and administrators can update any active render and its active composition.
       operationId: updateImage
       requestBody:
         required: true
@@ -1417,12 +1430,105 @@ paths:
       security:
         - BearerAuth: []
 
+  /images/move:
+    post:
+      tags:
+        - Images
+      summary: Move renders to an existing composition
+      description: >
+        Moves the entire batch atomically. Contributors must have submitted every
+        render and created every source and target composition. Curators and
+        administrators can move any active renders between active compositions. Renders already in the
+        target are accepted as-is. Source compositions with no remaining active
+        renders are soft-deleted.
+      operationId: moveImages
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: Comma-separated list of one to five distinct render IDs.
+          style: form
+          explode: false
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 5
+            uniqueItems: true
+            items:
+              type: integer
+              format: int64
+              minimum: 1
+              maximum: 9007199254740991
+          example: [123, 456]
+        - name: comp
+          in: query
+          required: true
+          description: Target composition ID.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 9007199254740991
+          example: 987
+      responses:
+        '200':
+          description: All requested renders belong to the target composition.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ids, composition_id]
+                properties:
+                  ids:
+                    type: array
+                    minItems: 1
+                    maxItems: 5
+                    uniqueItems: true
+                    items:
+                      type: integer
+                      format: int64
+                  composition_id:
+                    type: integer
+                    format: int64
+              example: { ids: [123, 456], composition_id: 987 }
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Caller cannot move one or more requested renders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: An active render or the active target composition was not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Move failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+
   /images/delete:
     post:
       tags:
         - Images
       summary: Delete an image
-      description: Delete an image. Only submitter or administrator can delete.
+      description: >
+        Contributors can delete renders they submitted in compositions they created.
+        Curators and administrators can delete any active render in an active composition.
+        A composition is soft-deleted when its last active render is deleted.
       operationId: deleteImage
       requestBody:
         required: true
@@ -1457,6 +1563,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Deletion failed or the render was deleted and media cleanup failed
           content:
             application/json:
               schema:
