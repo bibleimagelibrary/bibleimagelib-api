@@ -54,6 +54,108 @@ components:
           OC00034: {}
           OC00035: {}
 
+    CompositionResponse:
+      type: object
+      required: [id, uuid, title, keywords, scriptures, composition_definitions, composition_thematic_links, updated_by, updated_by_email]
+      properties:
+        id: { type: integer, format: int64 }
+        uuid: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        keywords:
+          type: array
+          items: { type: string }
+        type: { type: string, nullable: true }
+        historical_context: { type: string, nullable: true }
+        default_language_code: { type: string, nullable: true }
+        authors: { type: string, nullable: true }
+        copyright: { type: string, nullable: true }
+        copyright_license: { type: string, nullable: true }
+        copyright_attribution: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        updated_by: { type: string, nullable: true }
+        updated_by_email: { type: string, format: email, nullable: true }
+        scriptures:
+          type: array
+          nullable: true
+          items: { type: string }
+        composition_definitions:
+          type: array
+          description: Definitions ordered by language code and ID.
+          items:
+            type: object
+            required: [id, language_code, title, subject, description, tags]
+            properties:
+              id: { type: integer, format: int64 }
+              language_code: { type: string }
+              title: { type: string, nullable: true }
+              subject: { type: string, nullable: true }
+              description: { type: string, nullable: true }
+              tags:
+                type: array
+                nullable: true
+                items: { type: string }
+        composition_thematic_links:
+          type: array
+          description: Thematic links ordered by ID.
+          items:
+            type: object
+            required: [id, thematic_link]
+            properties:
+              id: { type: integer, format: int64 }
+              thematic_link: { type: string }
+        images:
+          type: array
+          description: Renders ordered by sort_order and ID. Omitted when images=false.
+          items:
+            $ref: '#/components/schemas/CompositionRenderResponse'
+
+    CompositionRenderResponse:
+      type: object
+      required: [id, uuid, sort_order, render_created_at, render_updated_at, render_updated_by, render_updated_by_email, external_id, external_ids]
+      properties:
+        id: { type: integer, format: int64 }
+        uuid: { type: string, format: uuid }
+        sort_order: { type: integer }
+        styles:
+          type: array
+          items: { type: string }
+        s3key: { type: string }
+        orig_url: { type: string }
+        thumb_url_small: { type: string }
+        thumb_url_large: { type: string }
+        avg_luminance: { type: number, nullable: true }
+        is_published: { type: boolean }
+        is_featured: { type: boolean }
+        original_file_name: { type: string, nullable: true }
+        format: { type: string, nullable: true }
+        resolution: { type: string, nullable: true }
+        mime_type: { type: string, nullable: true }
+        version: { type: string, nullable: true }
+        render_created_at: { type: string, format: date-time }
+        render_updated_at: { type: string, format: date-time }
+        render_updated_by: { type: string, nullable: true }
+        render_updated_by_email: { type: string, format: email, nullable: true }
+        render_authors:
+          type: string
+          description: Nonempty render authors when they differ from the parent composition.
+        render_copyright:
+          type: string
+          description: Nonempty render copyright when it differs from the parent composition.
+        render_copyright_license:
+          type: string
+          description: Nonempty render license when it differs from the parent composition.
+        render_copyright_attribution:
+          type: string
+          description: Nonempty render attribution when it differs from the parent composition.
+        external_id:
+          type: string
+          nullable: true
+          description: First external ID ordered by authority code and external ID, or null when absent.
+        external_ids:
+          $ref: '#/components/schemas/RenderExternalIds'
+
     ImageResponse:
       type: object
       properties:
@@ -1391,6 +1493,55 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+
+  /compositions:
+    get:
+      tags:
+        - Compositions
+      summary: List compositions or retrieve one by ID
+      description: Returns non-deleted compositions with at least one non-deleted render, in composition ID order.
+      operationId: getCompositions
+      parameters:
+        - name: id
+          in: query
+          description: Single numeric composition ID. Omit to list all eligible compositions.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 9007199254740991
+        - name: images
+          in: query
+          description: Include renders by default. Set to false to omit the images field.
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Composition list. Contains one entry when id is supplied and found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [compositions]
+                properties:
+                  compositions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CompositionResponse'
+        '400':
+          description: Invalid id or images parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No eligible composition with the requested ID
           content:
             application/json:
               schema:
